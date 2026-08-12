@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriVision AI</title>
+
+    <!-- PWA settings -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#2E7D32">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AgriVision">
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/icons/favicon.ico') }}" type="image/x-icon">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.1.0/github-markdown.min.css">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="app-container">
+
+
+        <div id="google_translate_element"></div>
+        <!-- Flash messages -->
+        <div class="flash-messages mt-2 mx-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Main content area -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Bottom Navigation (only if authenticated) -->
+        {% if current_user.is_authenticated %}
+        <nav class="bottom-nav">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item active">
+                <i class="bi bi-house-door"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('main.scan') }}"
+                class="nav-item {% if request.endpoint == 'main.scan' %}active{% endif %}">
+                <i class="bi bi-camera"></i>
+                <span>Scan</span>
+            </a>
+            <a href="{{ url_for('main.yield_prediction') }}"
+                class="nav-item {% if request.endpoint == 'main.yield_prediction' %}active{% endif %}">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>Yield</span>
+            </a>
+            <a href="{{ url_for('main.assistant') }}"
+                class="nav-item {% if request.endpoint == 'main.assistant' %}active{% endif %}">
+                <i class="bi bi-robot"></i>
+                <span>AI</span>
+            </a>
+            <a href="{{ url_for('main.farms') }}"
+                class="nav-item {% if request.endpoint == 'main.farms' or request.endpoint == 'main.crops' %}active{% endif %}">
+                <i class="bi bi-map"></i>
+                <span>Farms</span>
+            </a>
+        </nav>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}").then(function (registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function (err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+    </script>
+
+
+    {% block extra_js %}{% endblock %}
+
+    <script>
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement(
+                {
+                    pageLanguage: 'en',
+                    includedLanguages: 'en,hi',
+                    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+                },
+                'google_translate_element'
+            );
+        }
+    </script>
+
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3 pb-5">
+    
+    <div class="text-center mb-4">
+        <h4 class="fw-bold">Scan Crop</h4>
+        <p class="text-muted small">Take a photo of the affected leaf</p>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4 text-center">
+            
+            <form id="scanForm">
+                <!-- Image Preview Area -->
+                <div id="imagePreviewContainer" class="mb-4 bg-light rounded-4 d-flex align-items-center justify-content-center" style="height: 250px; overflow: hidden; cursor: pointer; border: 2px dashed #ccc;" onclick="document.getElementById('imageInput').click()">
+                    <div id="imagePlaceholder">
+                        <i class="bi bi-camera display-1 text-muted opacity-50"></i>
+                        <p class="text-muted mt-2 small fw-bold">Tap to capture or upload</p>
+                    </div>
+                    <img id="imagePreview" src="" alt="Crop Preview" class="d-none w-100 h-100" style="object-fit: cover;">
+                </div>
+                
+                <!-- Hidden File Input -->
+                <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="d-none" required onchange="previewImage(this)">
+                
+                <!-- Optional Inputs -->
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold text-muted">Select Crop (Optional)</label>
+                    <select class="form-select border-0 bg-light" name="crop_id">
+                        <option value="">Unknown / Auto-detect</option>
+                        {% for crop in crops %}
+                            <option value="{{ crop.id }}">{{ crop.name }} ({{ crop.variety }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold text-muted">Describe Symptoms (Optional)</label>
+                    <div class="input-group">
+                        <textarea class="form-control border-0 bg-light" id="symptomsText" name="farmer_observation" rows="2" placeholder="e.g. Yellowing leaves..."></textarea>
+                        <button type="button" class="btn btn-light border-0" id="scanMicBtn"><i class="bi bi-mic text-muted" id="scanMicIcon"></i></button>
+                    </div>
+                </div>
+                
+                <button type="submit" id="analyzeBtn" class="btn btn-primary w-100 rounded-pill btn-lg d-flex justify-content-center align-items-center">
+                    <span id="btnText">Analyze Crop</span>
+                    <div id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></div>
+                </button>
+            </form>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        
+        reader.onload = function(e) {
+            document.getElementById('imagePlaceholder').classList.add('d-none');
+            const preview = document.getElementById('imagePreview');
+            preview.src = e.target.result;
+            preview.classList.remove('d-none');
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+document.getElementById('scanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // UI Loading state
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const btn = document.getElementById('analyzeBtn');
+    
+    btnText.innerText = 'Analyzing...';
+    btnSpinner.classList.remove('d-none');
+    btn.disabled = true;
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("api.analyze_disease") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Redirect to result page whenever we have an analysis_id
+        // (covers both 'success' and 'uncertain' statuses)
+        if (data.analysis_id) {
+            window.location.href = '/disease-result/' + data.analysis_id;
+        } else {
+            const msg = data.error || data.message || 'Analysis failed. Please try again.';
+            alert(msg);
+            // Reset UI
+            btnText.innerText = 'Analyze Crop';
+            btnSpinner.classList.add('d-none');
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        alert('Network error occurred. Please check your connection.');
+        btnText.innerText = 'Analyze Crop';
+        btnSpinner.classList.add('d-none');
+        btn.disabled = false;
+    });
+});
+
+// STT (Speech-to-Text) Implementation for Scanner
+const scanMicBtn = document.getElementById('scanMicBtn');
+const scanMicIcon = document.getElementById('scanMicIcon');
+const symptomsText = document.getElementById('symptomsText');
+let scanRecognition;
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    scanRecognition = new SpeechRecognition();
+    scanRecognition.lang = 'hi-IN';
+    scanRecognition.continuous = false;
+    scanRecognition.interimResults = false;
+    
+    scanRecognition.onstart = function() {
+        scanMicBtn.classList.add('text-danger');
+        scanMicIcon.classList.remove('bi-mic');
+        scanMicIcon.classList.add('bi-mic-fill');
+        symptomsText.placeholder = "Listening...";
+    };
+    
+    scanRecognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        symptomsText.value += (symptomsText.value ? ' ' : '') + transcript;
+    };
+    
+    scanRecognition.onerror = function(event) {
+        console.error("Speech recognition error", event.error);
+    };
+    
+    scanRecognition.onend = function() {
+        scanMicBtn.classList.remove('text-danger');
+        scanMicIcon.classList.add('bi-mic');
+        scanMicIcon.classList.remove('bi-mic-fill');
+        symptomsText.placeholder = "e.g. Yellowing leaves...";
+    };
+    
+    scanMicBtn.addEventListener('click', () => {
+        try {
+            scanRecognition.start();
+        } catch(e) {
+            scanRecognition.stop();
+        }
+    });
+} else {
+    scanMicBtn.style.display = 'none';
+}
+</script>
+{% endblock %}

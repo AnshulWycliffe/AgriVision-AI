@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3 pb-5">
+    
+    <div class="text-center mb-4">
+        <h4 class="fw-bold">Predict Yield</h4>
+        <p class="text-muted small">Estimate production based on farm and crop data</p>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <form id="yieldForm">
+                
+                <h6 class="fw-bold text-success mb-3"><i class="bi bi-flower1 me-2"></i>Crop Information</h6>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Select Crop</label>
+                    <select class="form-select border-0 bg-light" name="crop_id" required>
+                        <option value="" disabled selected>Choose a crop...</option>
+                        {% for crop in crops %}
+                            <option value="{{ crop.id }}">{{ crop.name }} ({{ crop.variety }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <h6 class="fw-bold text-warning mb-3 mt-4"><i class="bi bi-bug me-2"></i>Disease Status (Optional)</h6>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Recent Analysis</label>
+                    <select class="form-select border-0 bg-light" name="disease_analysis_id" id="analysisSelect">
+                        <option value="">No recent disease / Healthy</option>
+                        {% for analysis in recent_analyses %}
+                            <option value="{{ analysis.id }}" data-severity="{{ analysis.severity }}">
+                                {{ analysis.date.strftime('%Y-%m-%d') }} - {{ analysis.detected_disease }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted">Disease Severity</label>
+                    <select class="form-select border-0 bg-light" name="disease_severity" id="severitySelect">
+                        <option value="">None</option>
+                        <option value="mild">Mild</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="severe">Severe</option>
+                    </select>
+                </div>
+
+                <!-- Hidden inputs for data we would normally gather from the farm object or weather API -->
+                <!-- For demo purposes we simplify the UX by hiding these complex inputs -->
+                <input type="hidden" name="soil_type" value="Loamy">
+                <input type="hidden" name="soil_ph" value="6.5">
+                
+                <button type="submit" id="predictBtn" class="btn btn-primary w-100 rounded-pill btn-lg d-flex justify-content-center align-items-center">
+                    <span id="btnText">Calculate Yield</span>
+                    <div id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Result Card (Hidden by default) -->
+    <div id="resultCard" class="card shadow border-0 mb-4 bg-success text-white overflow-hidden position-relative d-none">
+        <div class="position-absolute top-0 end-0 opacity-25 p-3">
+            <i class="bi bi-graph-up-arrow" style="font-size: 80px;"></i>
+        </div>
+        <div class="card-body p-4 position-relative z-1">
+            <h6 class="fw-bold opacity-75 mb-1">Expected Yield</h6>
+            <h2 class="fw-bold mb-0 display-4"><span id="yieldPerAcre">--</span></h2>
+            <p class="mb-3 opacity-75">tonnes per acre</p>
+            
+            <hr class="border-light opacity-50">
+            
+            <h6 class="fw-bold opacity-75 mb-1">Total Expected Production</h6>
+            <h3 class="fw-bold mb-0"><span id="totalYield">--</span> tonnes</h3>
+            
+            <div id="penaltyWarning" class="mt-3 bg-white text-danger px-3 py-2 rounded-pill small fw-bold d-none shadow-sm d-inline-block">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Yield reduced due to disease
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-select severity if an analysis is chosen
+document.getElementById('analysisSelect').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const severity = selected.getAttribute('data-severity');
+    const severitySelect = document.getElementById('severitySelect');
+    
+    if (severity) {
+        // Convert to lowercase to match option values
+        severitySelect.value = severity.toLowerCase();
+    } else {
+        severitySelect.value = "";
+    }
+});
+
+document.getElementById('yieldForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const btn = document.getElementById('predictBtn');
+    
+    btnText.innerText = 'Calculating...';
+    btnSpinner.classList.remove('d-none');
+    btn.disabled = true;
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("api.predict_yield") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            document.getElementById('yieldPerAcre').innerText = data.yield_per_acre;
+            document.getElementById('totalYield').innerText = data.total_yield;
+            
+            if(data.penalty_applied) {
+                document.getElementById('penaltyWarning').classList.remove('d-none');
+            } else {
+                document.getElementById('penaltyWarning').classList.add('d-none');
+            }
+            
+            document.getElementById('resultCard').classList.remove('d-none');
+            
+            // Scroll to result
+            document.getElementById('resultCard').scrollIntoView({behavior: 'smooth'});
+        } else {
+            alert('Prediction failed: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        alert('Network error occurred.');
+    })
+    .finally(() => {
+        btnText.innerText = 'Calculate Yield';
+        btnSpinner.classList.add('d-none');
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

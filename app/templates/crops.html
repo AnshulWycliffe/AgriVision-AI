@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3 pb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">My Crops</h4>
+        <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addCropModal">
+            <i class="bi bi-plus-lg me-1"></i> Add Crop
+        </button>
+    </div>
+
+    {% if crops %}
+        <div class="row g-3">
+        {% for crop in crops %}
+            <div class="col-12">
+                <div class="card shadow-sm border-0 border-start border-4 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h5 class="fw-bold text-dark mb-0">{{ crop.name }}</h5>
+                            <span class="badge bg-light text-success border border-success">{{ crop.variety }}</span>
+                        </div>
+                        <p class="text-muted small mb-0"><i class="bi bi-map me-1"></i>{{ crop.farm_location.name if crop.farm_location else 'Unassigned Farm' }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center text-muted mt-5 py-5">
+            <i class="bi bi-flower1 display-1 text-light mb-3"></i>
+            <p>You haven't added any crops yet.</p>
+            {% if farms %}
+                <button class="btn btn-outline-success rounded-pill px-4 mt-2" data-bs-toggle="modal" data-bs-target="#addCropModal">Add your first crop</button>
+            {% else %}
+                <a href="{{ url_for('main.farms') }}" class="btn btn-outline-success rounded-pill px-4 mt-2">Create a farm first</a>
+            {% endif %}
+        </div>
+    {% endif %}
+    
+    <!-- Add Crop Modal -->
+    <div class="modal fade" id="addCropModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Add New Crop</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCropForm">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Crop Name</label>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g. Tomato">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Variety</label>
+                            <input type="text" class="form-control" name="variety" placeholder="e.g. Roma">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Farm</label>
+                            <select class="form-select border-0 bg-light" name="farm_id" required>
+                                <option value="" disabled selected>Select Farm...</option>
+                                {% for farm in farms %}
+                                    <option value="{{ farm.id }}">{{ farm.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill btn-lg">Save Crop</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('addCropForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("api.handle_crops") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            window.location.reload();
+        } else {
+            alert('Error adding crop');
+        }
+    });
+});
+</script>
+{% endblock %}

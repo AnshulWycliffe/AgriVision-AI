@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3 pb-5">
+
+  <!-- Back -->
+  <div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('main.scan') }}" class="text-dark me-3">
+      <i class="bi bi-arrow-left fs-4"></i>
+    </a>
+    <h4 class="fw-bold mb-0">Analysis Result</h4>
+  </div>
+
+  {% if result.status == 'uncertain' %}
+  <!-- ── Uncertain Result Card ─────────────────────────────────── -->
+  <div class="card shadow-sm border-0 mb-4 bg-warning text-dark overflow-hidden position-relative">
+    <div class="position-absolute top-0 end-0 opacity-25 p-3">
+      <i class="bi bi-question-circle-fill" style="font-size: 80px;"></i>
+    </div>
+    <div class="card-body p-4 position-relative z-1">
+      <span class="badge bg-dark text-warning mb-2 px-3 py-2 rounded-pill shadow-sm">
+        {{ (result.confidence * 100) | round(1) }}% Confidence
+      </span>
+      <h2 class="fw-bold mb-1">अनिश्चित परिणाम</h2>
+      <p class="mb-0 opacity-75">Image could not be classified reliably. Please retake a clearer leaf photo.</p>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ── Success Result Card ────────────────────────────────────── -->
+  {% set is_healthy = 'healthy' in result.disease | lower %}
+  <div class="card shadow-sm border-0 mb-4 overflow-hidden position-relative
+              {% if is_healthy %}bg-success{% else %}bg-danger{% endif %} text-white">
+    <div class="position-absolute top-0 end-0 opacity-25 p-3">
+      <i class="bi {% if is_healthy %}bi-flower1{% else %}bi-bug-fill{% endif %}" style="font-size: 80px;"></i>
+    </div>
+    <div class="card-body p-4 position-relative z-1">
+      <span
+        class="badge bg-white {% if is_healthy %}text-success{% else %}text-danger{% endif %} mb-2 px-3 py-2 rounded-pill shadow-sm">
+        {{ (result.confidence * 100) | round(1) }}% Confidence
+      </span>
+      <h2 class="fw-bold mb-1">{{ result.disease }}</h2>
+      <p class="mb-0 opacity-75">
+        Detected on <strong>{{ result.crop }}</strong>
+        {% if result.severity %} • Severity: {{ result.severity }}{% endif %}
+      </p>
+
+      <!-- TTS Button -->
+      <button id="ttsBtn" class="btn btn-light btn-sm rounded-pill mt-3 px-3" onclick="speakResult()">
+        <i class="bi bi-volume-up-fill me-1"></i> सुनें
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Top Predictions ───────────────────────────────────────── -->
+  {% if result.top_predictions %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-4 pb-0">
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="bi bi-bar-chart-fill me-2 text-primary"></i>Top Predictions
+      </h6>
+    </div>
+    <div class="card-body">
+      {% for pred in result.top_predictions %}
+      {% set pct = (pred.confidence * 100) | round(1) %}
+      <div class="mb-3">
+        <div class="d-flex justify-content-between mb-1">
+          <small class="fw-semibold text-dark">{{ pred.class.replace('___', ' — ').replace('_', ' ') }}</small>
+          <small class="text-muted">{{ pct }}%</small>
+        </div>
+        <div class="progress" style="height: 8px; border-radius: 4px;">
+          <div class="progress-bar {% if loop.first %}bg-primary{% else %}bg-secondary opacity-50{% endif %} rounded"
+            style="width: {{ pct }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Tabs: Actions / Symptoms ──────────────────────────────── -->
+  <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded-pill shadow-sm" id="resultTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active rounded-pill text-dark fw-bold" id="actions-tab" data-bs-toggle="tab"
+        data-bs-target="#actions" type="button" role="tab">
+        Actions
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link rounded-pill text-dark fw-bold" id="details-tab" data-bs-toggle="tab"
+        data-bs-target="#details" type="button" role="tab">
+        Symptoms
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link rounded-pill text-dark fw-bold" id="ai-tab" data-bs-toggle="tab"
+        data-bs-target="#ai-explain" type="button" role="tab">
+        AI
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="resultTabsContent">
+
+    <!-- Actions Tab -->
+    <div class="tab-pane fade show active" id="actions" role="tabpanel">
+
+      {% if result.gemini_explanation %}
+      <div class="card border-0 shadow-sm mb-3 bg-light">
+        <div class="card-header bg-white border-0 pt-3 pb-0">
+          <h6 class="fw-bold text-primary mb-0">
+            <i class="bi bi-robot me-2"></i>AI Explanation
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="text-dark small mb-0" style="line-height: 1.6;">{{ result.gemini_explanation }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if result.recommendations %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-0 pt-4 pb-0">
+          <h6 class="fw-bold text-success mb-0">
+            <i class="bi bi-check-circle-fill me-2"></i>Recommended Actions
+          </h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            {% for rec in result.recommendations %}
+            <li class="d-flex mb-3">
+              <i class="bi bi-arrow-right-short text-success fs-5 me-2 mt-n1"></i>
+              <span class="text-dark">{{ rec }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if result.prevention %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-0 pt-4 pb-0">
+          <h6 class="fw-bold text-info mb-0">
+            <i class="bi bi-shield-check me-2"></i>Prevention
+          </h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            {% for prev in result.prevention %}
+            <li class="d-flex mb-2 text-muted small">
+              <i class="bi bi-dot"></i> {{ prev }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if not result.recommendations and not result.prevention %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body text-center py-4 text-muted">
+          <i class="bi bi-robot fs-2 mb-2 d-block text-primary opacity-50"></i>
+          <p class="small mb-2">AI explanation not available for this result.</p>
+          <a href="{{ url_for('main.assistant') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+            Ask AI Assistant
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Symptoms Tab -->
+    <div class="tab-pane fade" id="details" role="tabpanel">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h6 class="fw-bold text-dark mb-3">Identified Symptoms</h6>
+          {% if result.symptoms %}
+          <ul class="list-unstyled mb-0">
+            {% for sym in result.symptoms %}
+            <li class="d-flex mb-2">
+              <i class="bi bi-exclamation-circle text-warning me-2 mt-1"></i>
+              <span>{{ sym }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted small">
+            Farmer's note:
+            {% if analysis.farmer_observation %}
+            <em>{{ analysis.farmer_observation }}</em>
+            {% else %}
+            No symptoms recorded.
+            {% endif %}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Explanation Tab -->
+    <div class="tab-pane fade" id="ai-explain" role="tabpanel">
+      {% if result.gemini_explanation %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-0 pt-3 pb-0">
+          <h6 class="fw-bold text-primary mb-0">
+            <i class="bi bi-robot me-2"></i>AI Agricultural Analysis
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="text-dark small mb-0" style="line-height: 1.7;">{{ result.gemini_explanation }}</p>
+        </div>
+      </div>
+      {% else %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body text-center py-4 text-muted">
+          <i class="bi bi-robot fs-2 mb-2 d-block text-primary opacity-50"></i>
+          <p class="small mb-2">AI explanation not available. Scan a new image to get AI analysis.</p>
+          <a href="{{ url_for('main.assistant') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+            Ask AI Assistant
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}{# end success block #}
+
+  <!-- ── Next Steps ────────────────────────────────────────────── -->
+  <div class="mt-4">
+    <a href="{{ url_for('main.yield_prediction') }}" class="btn btn-outline-primary w-100 rounded-pill mb-2">
+      <i class="bi bi-graph-up-arrow me-2"></i>Predict Yield Impact
+    </a>
+    <a href="{{ url_for('main.assistant') }}" class="btn btn-outline-success w-100 rounded-pill">
+      <i class="bi bi-robot me-2"></i>Ask AI Assistant
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function speakResult() {
+    if (!('speechSynthesis' in window)) return;
+    const crop = "{{ result.crop | default('') | e }}";
+    const disease = "{{ result.disease | default('') | e }}";
+    const conf = "{{ ((result.confidence or 0) * 100) | round(1) }}";
+    const text = `Crop: ${crop}. बीमारी: ${disease}. विश्वास: ${conf} प्रतिशत.`;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'hi-IN';
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
+</script>
+{% endblock %}

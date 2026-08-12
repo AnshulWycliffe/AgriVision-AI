@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid pt-3 px-3 pb-5 d-flex flex-column" style="height: calc(100vh - 60px);">
+
+    <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+        <h4 class="fw-bold mb-0 text-success"><i class="bi bi-robot me-2"></i>AI Assistant</h4>
+    </div>
+
+    <!-- Chat Area -->
+    <div id="chatBox" class="flex-grow-1 overflow-auto mb-3 px-1"
+        style="display: flex; flex-direction: column; gap: 1rem;">
+
+        <!-- Welcome Message (if no history) -->
+        {% if not chat_history %}
+        <div class="d-flex align-items-start mb-3">
+            <div class="bg-success text-white rounded-circle p-2 me-2 d-flex align-items-center justify-content-center shadow-sm"
+                style="width: 40px; height: 40px;">
+                <i class="bi bi-robot fs-5"></i>
+            </div>
+            <div class="bg-white p-3 rounded-4 shadow-sm text-dark"
+                style="max-width: 85%; border-top-left-radius: 0 !important;">
+                Hello! I'm your AgriVision AI Assistant. How can I help you with your farm today? You can ask me about
+                crop diseases, pest control, or general farming advice.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Chat History -->
+        {% for msg in chat_history %}
+
+        {% if msg.role == 'user' %}
+
+        <div class="d-flex align-items-start justify-content-end mb-2">
+            <div class="bg-success text-white p-3 rounded-4 shadow-sm"
+                style="max-width: 85%; border-top-right-radius: 0 !important;">
+                {{ msg.content }}
+            </div>
+        </div>
+
+        {% elif msg.role == 'ai' %}
+
+        <div class="d-flex align-items-start mb-2">
+
+            <div class="bg-light text-success rounded-circle p-2 me-2
+                    d-flex align-items-center justify-content-center
+                    shadow-sm" style="width: 40px;
+                    height: 40px;
+                    border: 1px solid #198754;">
+
+                <i class="bi bi-robot fs-5"></i>
+
+            </div>
+
+            <div class="bg-white p-3 rounded-4 shadow-sm text-dark
+                    ai-content position-relative pe-5" style="max-width: 85%;
+                    border-top-left-radius: 0 !important;
+                    font-size: 0.95rem;">
+
+                <!-- Raw Markdown -->
+                <div class="markdown-body">
+                    {{ msg.content }}
+                </div>
+
+                <button type="button" class="btn btn-sm btn-light
+                           position-absolute bottom-0 end-0 m-2
+                           rounded-circle shadow-sm tts-button" title="Listen">
+
+                    <i class="bi bi-volume-up"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+        {% endfor %}
+
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="d-none align-items-start mb-2">
+            <div class="bg-light text-success rounded-circle p-2 me-2 d-flex align-items-center justify-content-center shadow-sm"
+                style="width: 40px; height: 40px; border: 1px solid #198754;">
+                <i class="bi bi-robot fs-5"></i>
+            </div>
+            <div class="bg-white p-3 rounded-4 shadow-sm text-dark d-flex align-items-center"
+                style="max-width: 85%; border-top-left-radius: 0 !important;">
+                <div class="spinner-grow spinner-grow-sm text-success me-1" role="status"></div>
+                <div class="spinner-grow spinner-grow-sm text-success me-1" role="status" style="animation-delay: 0.2s">
+                </div>
+                <div class="spinner-grow spinner-grow-sm text-success" role="status" style="animation-delay: 0.4s">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="mt-auto">
+        <form id="chatForm" class="position-relative">
+            <input type="hidden" id="conversationId" value="{{ conversation_id }}">
+            <div class="input-group shadow-sm rounded-pill bg-white p-1">
+                <button class="btn btn-light rounded-circle text-success" type="button"
+                    onclick="alert('Image upload for chat coming soon!')">
+                    <i class="bi bi-camera"></i>
+                </button>
+                <input type="text" id="chatInput" class="form-control border-0 bg-transparent shadow-none"
+                    placeholder="Ask AI..." required>
+                <button class="btn btn-light rounded-circle text-muted" type="button" id="micBtn">
+                    <i class="bi bi-mic" id="micIcon"></i>
+                </button>
+                <button class="btn btn-success rounded-circle ms-1" type="submit" id="sendBtn">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.1.0/github-markdown.min.css">
+<script>
+    const chatBox = document.getElementById('chatBox');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const conversationIdInput = document.getElementById('conversationId');
+
+    // Scroll to bottom on load
+    chatBox.scrollTop = chatBox.scrollHeight;
+    // Render any markdown in historic AI messages
+    renderChatHistory();
+
+    chatForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const message = chatInput.value.trim();
+
+        if (!message) return;
+
+        // Add User Message to UI
+        appendMessage(message, 'user');
+        chatInput.value = '';
+
+        // Show typing indicator
+        typingIndicator.classList.remove('d-none');
+        typingIndicator.classList.add('d-flex');
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        fetch('{{ url_for("api.assistant_chat") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                conversation_id: conversationIdInput.value
+            })
+        })
+            .then(async response => {
+
+                // Read response as JSON
+                const data = await response.json();
+
+                console.log('Assistant API:', data);
+
+                // Handle HTTP errors
+                if (!response.ok) {
+                    throw new Error(
+                        data.error || `Server error: ${response.status}`
+                    );
+                }
+
+                return data;
+            })
+            .then(data => {
+
+                // Hide typing indicator
+                typingIndicator.classList.add('d-none');
+                typingIndicator.classList.remove('d-flex');
+
+                if (data.success) {
+
+                    // Gemini response
+                    const content = data.response || '';
+
+                    // Plain text for speech
+                    const rawText = content
+                        .replace(/[#*_`]/g, '')
+                        .replace(/\[(.*?)\]\(.*?\)/g, '$1');
+
+                    // Display AI message (render markdown inside appendMessage)
+                    appendMessage(content, 'ai');
+
+                    // Play speech
+                    playText(rawText);
+
+                    // Update conversation ID
+                    if (data.conversation_id && !conversationIdInput.value) {
+                        conversationIdInput.value = data.conversation_id;
+                    }
+                } else {
+
+                    appendMessage(
+                        'Error: ' +
+                        (data.error || 'Could not connect to AI.'),
+                        'ai'
+                    );
+                }
+            })
+            .catch(error => {
+
+                console.error('Assistant API Error:', error);
+
+                typingIndicator.classList.add('d-none');
+                typingIndicator.classList.remove('d-flex');
+
+                appendMessage(
+                    'Error: ' + error.message,
+                    'ai'
+                );
+            });
+    });
+
+    function renderMarkdown(text) {
+        const html = marked.parse(text, {
+            breaks: true,
+            gfm: true
+        });
+
+        return DOMPurify.sanitize(html);
+    }
+
+    function renderChatHistory() {
+        const markdownDivs = document.querySelectorAll('.markdown-body');
+        markdownDivs.forEach(div => {
+            if (div.dataset.rendered) return;
+            // Clean raw markdown: trim whitespace and remove leading indentation
+            const raw = div.textContent.trim().replace(/^ {4}/gm, '');
+            const html = renderMarkdown(raw);
+            div.innerHTML = html;
+            div.dataset.rendered = 'true';
+            // Attach TTS listener
+            const parent = div.parentElement;
+            const ttsBtn = parent?.querySelector('.tts-button');
+            if (ttsBtn && !ttsBtn.dataset.listener) {
+                // strip markdown syntax for speech
+                const plain = raw.replace(/[#*_`]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
+                ttsBtn.dataset.listener = 'true';
+                ttsBtn.addEventListener('click', () => playText(plain));
+            }
+        });
+    }
+    // Initial render for historic messages
+    renderChatHistory();
+
+    function appendMessage(content, role) {
+        const div = document.createElement('div');
+
+        if (role === 'user') {
+
+            div.className =
+                'd-flex align-items-start justify-content-end mb-2';
+
+            div.innerHTML = `
+            <div class="bg-success text-white p-3 rounded-4 shadow-sm"
+                 style="max-width: 85%;
+                        border-top-right-radius: 0 !important;">
+                ${DOMPurify.sanitize(content)}
+            </div>
+        `;
+
+        } else {
+
+            div.className =
+                'd-flex align-items-start mb-2';
+
+            // ============================================
+            // MARKDOWN → HTML
+            // ============================================
+
+            const renderedHTML = marked.parse(content || '', {
+                breaks: true,
+                gfm: true
+            });
+
+            // ============================================
+            // SANITIZE HTML
+            // ============================================
+
+            const safeHTML = DOMPurify.sanitize(renderedHTML);
+
+            // ============================================
+            // HTML → PLAIN TEXT FOR TTS
+            // ============================================
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = safeHTML;
+
+            const rawText =
+                tempDiv.textContent ||
+                tempDiv.innerText ||
+                '';
+
+            console.log(rawText);
+
+            // ============================================
+            // AI MESSAGE
+            // ============================================
+
+            div.innerHTML = `
+            <div class="bg-light text-success rounded-circle p-2 me-2
+                        d-flex align-items-center justify-content-center
+                        shadow-sm"
+                 style="width: 40px;
+                        height: 40px;
+                        border: 1px solid #198754;
+                        flex-shrink: 0;">
+
+                <i class="bi bi-robot fs-5"></i>
+
+            </div>
+
+            <div class="bg-white p-3 rounded-4 shadow-sm text-dark
+                        position-relative pe-5 ai-message"
+                 style="max-width: 85%;
+                        border-top-left-radius: 0 !important;
+                        font-size: 0.95rem;">
+
+                <div class="markdown-body">
+                    ${safeHTML}
+                </div>
+
+                <button type="button"
+                        class="btn btn-sm btn-light
+                               position-absolute bottom-0 end-0 m-2
+                               rounded-circle shadow-sm tts-button"
+                        title="Listen">
+
+                    <i class="bi bi-volume-up"></i>
+
+                </button>
+
+            </div>
+        `;
+
+            // ============================================
+            // TTS BUTTON
+            // ============================================
+
+            const ttsButton = div.querySelector('.tts-button');
+
+            ttsButton.addEventListener('click', function () {
+                playText(rawText);
+            });
+        }
+
+        // ============================================
+        // INSERT MESSAGE
+        // ============================================
+
+        chatBox.insertBefore(div, typingIndicator);
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // STT (Speech-to-Text) Implementation
+    const micBtn = document.getElementById('micBtn');
+    const micIcon = document.getElementById('micIcon');
+    let recognition;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'hi-IN';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = function () {
+            micBtn.classList.remove('btn-light', 'text-muted');
+            micBtn.classList.add('btn-danger', 'text-white');
+            micIcon.classList.remove('bi-mic');
+            micIcon.classList.add('bi-mic-fill');
+            chatInput.placeholder = "Listening...";
+        };
+
+        recognition.onresult = function (event) {
+            const transcript = event.results[0][0].transcript;
+            chatInput.value += transcript;
+        };
+
+        recognition.onerror = function (event) {
+            console.error("Speech recognition error", event.error);
+            alert("Speech recognition failed: " + event.error);
+        };
+
+        recognition.onend = function () {
+            micBtn.classList.add('btn-light', 'text-muted');
+            micBtn.classList.remove('btn-danger', 'text-white');
+            micIcon.classList.add('bi-mic');
+            micIcon.classList.remove('bi-mic-fill');
+            chatInput.placeholder = "Ask AI...";
+        };
+
+        micBtn.addEventListener('click', () => {
+            try {
+                recognition.start();
+            } catch (e) {
+                recognition.stop();
+            }
+        });
+    } else {
+        micBtn.style.display = 'none';
+    }
+
+    // TTS (Text-to-Speech) Implementation
+    function playText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stop any currently playing audio
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'hi-IN';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert("Text-to-Speech is not supported in this browser.");
+        }
+    }
+</script>
+{% endblock %}

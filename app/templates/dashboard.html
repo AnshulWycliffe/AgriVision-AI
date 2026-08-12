@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-0 fw-bold">Hello, {{ current_user.username }}</h4>
+            <p class="text-muted mb-0 small">Welcome to AgriVision AI</p>
+        </div>
+        <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+            style="width: 48px; height: 48px; font-size: 20px;">
+            {{ current_user.username[0]|upper }}
+        </div>
+    </div>
+
+    <!-- Main Action -->
+    <div class="card bg-success text-white mb-4 overflow-hidden position-relative border-0 shadow">
+        <div class="position-absolute top-0 end-0 opacity-25 p-3">
+            <i class="bi bi-flower1" style="font-size: 80px;"></i>
+        </div>
+        <div class="card-body p-4 position-relative z-1">
+            <h5 class="fw-bold mb-2">Scan Your Crop</h5>
+            <p class="small mb-3 opacity-75">Detect diseases and get instant solutions</p>
+            <a href="{{ url_for('main.scan') }}"
+                class="btn btn-light text-success fw-bold rounded-pill px-4 shadow-sm text-decoration-none d-inline-block">
+                <i class="bi bi-camera-fill me-2"></i> Open Camera
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4 mt-4">
+        <div class="card-body">
+
+            {% if weather and weather.success %}
+
+            <!-- Main Weather -->
+            <div class="d-flex align-items-center">
+
+                <!-- Weather Icon -->
+                {% if weather.icon %}
+                <img src="{{ weather.icon }}" alt="{{ weather.condition }}" class="me-3"
+                    style="width: 56px; height: 56px;">
+                {% else %}
+                <i class="bi bi-cloud-sun text-warning fs-1 me-3"></i>
+                {% endif %}
+
+                <!-- Weather Details -->
+                <div>
+                    <h5 class="mb-0 fw-bold">
+                        {{ weather.temp_c }}°C
+                    </h5>
+
+                    <div class="text-muted small">
+                        {{ weather.condition }}
+                        <span class="mx-1">•</span>
+
+                        <span class="{{ weather.risk.text_class }}">
+                            {{ weather.risk.level }} Risk
+                        </span>
+                    </div>
+
+                    <div class="text-muted small">
+                        {{ weather.city }}
+                        {% if weather.region %}
+                        , {{ weather.region }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Logout -->
+                <a class="ms-auto btn btn-sm btn-outline-success rounded-pill" href="{{ url_for('auth.logout') }}">
+                    Logout
+                </a>
+
+            </div>
+
+
+            <!-- Weather Metrics -->
+            <div class="row g-2 mt-3">
+
+                <!-- Feels Like -->
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-2 text-center">
+                        <div class="text-muted small">
+                            महसूस
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ weather.feelslike_c }}°C
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Humidity -->
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-2 text-center">
+                        <div class="text-muted small">
+                            नमी
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ weather.humidity }}%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rain -->
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-2 text-center">
+                        <div class="text-muted small">
+                            बारिश
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ weather.precip_mm }} mm
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- Agricultural Risk -->
+            {% if weather.risk %}
+
+            <div class="mt-3 p-3 rounded-3 border">
+
+                <div class="d-flex align-items-start">
+
+                    <div class="me-3">
+                        <i class="bi bi-exclamation-triangle-fill
+                              {{ weather.risk.text_class }}
+                              fs-4"></i>
+                    </div>
+
+                    <div class="flex-grow-1">
+
+                        <div class="d-flex align-items-center gap-2">
+
+                            <strong>
+                                कृषि जोखिम
+                            </strong>
+
+                            <span class="badge {{ weather.risk.badge_class }}">
+                                {{ weather.risk.level }}
+                            </span>
+
+                        </div>
+
+                        <div class="text-muted small mt-1">
+                            {{ weather.risk.summary }}
+                        </div>
+
+                        {% if weather.risk.recommendation %}
+                        <div class="small mt-2">
+                            <strong>सलाह:</strong>
+                            {{ weather.risk.recommendation }}
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endif %}
+
+
+            <!-- Wind -->
+            <div class="text-muted small mt-3">
+                <i class="bi bi-wind me-1"></i>
+                Wind: {{ weather.wind_kph }} km/h
+            </div>
+
+
+            {% else %}
+
+            <!-- Weather Error -->
+            <div class="d-flex align-items-center">
+
+                <i class="bi bi-cloud-slash text-secondary fs-1 me-3"></i>
+
+                <div>
+                    <h6 class="mb-1 fw-bold">
+                        मौसम की जानकारी उपलब्ध नहीं है
+                    </h6>
+
+                    <div class="text-muted small">
+                        वर्तमान मौसम की जानकारी प्राप्त नहीं की जा सकी।
+                    </div>
+                </div>
+
+                <a class="ms-auto btn btn-sm btn-outline-success rounded-pill" href="{{ url_for('auth.logout') }}">
+                    Logout
+                </a>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Farmers News Section -->
+    <h6 class="fw-bold text-muted mb-3">Farmers News</h6>
+    <div class="list-group mb-4">
+        {% for item in news_items %}
+        <a href="{{ item.link }}" class="list-group-item list-group-item-action news-row d-flex align-items-center gap-2"
+            target="_blank">
+            {% if item.image %}
+            <img src="{{ item.image }}" class="news-thumb" alt="">
+            {% else %}
+            <div class="news-thumb-placeholder d-flex align-items-center justify-content-center">
+                <i class="bi bi-newspaper text-muted"></i>
+            </div>
+            {% endif %}
+            <div class="flex-grow-1 min-w-0">
+                <div class="news-title-compact">{{ item.title }}</div>
+                <div class="news-date">{{ item.published.split(' ')[0] if item.published else '' }}</div>
+            </div>
+            <i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size:0.75rem;"></i>
+        </a>
+        {% endfor %}
+    </div>
+
+
+    <!-- Stats + Recent Activity strip -->
+    {% if recent_analysis or recent_yield or farms_count or crops_count %}
+    <h6 class="fw-bold text-muted mb-2">Overview</h6>
+    <div class="activity-strip mb-4">
+
+        <a href="{{ url_for('main.farms') }}" class="text-decoration-none">
+            <div class="activity-chip">
+                <i class="bi bi-map text-info"></i>
+                <span class="fw-semibold">{{ farms_count }}</span>
+                <span class="text-muted">Farms</span>
+            </div>
+        </a>
+
+        <a href="{{ url_for('main.crops') }}" class="text-decoration-none">
+            <div class="activity-chip">
+                <i class="bi bi-flower1 text-success"></i>
+                <span class="fw-semibold">{{ crops_count }}</span>
+                <span class="text-muted">Crops</span>
+            </div>
+        </a>
+
+        {% if recent_analysis %}
+        <a href="{{ url_for('main.disease_result', analysis_id=recent_analysis.id) }}" class="text-decoration-none">
+            <div class="activity-chip activity-chip--danger">
+                <i class="bi bi-bug"></i>
+                <span class="fw-semibold text-truncate" style="max-width:90px;">{{ recent_analysis.detected_disease }}</span>
+                <span class="badge bg-danger" style="font-size:0.6rem;">{{ recent_analysis.severity }}</span>
+            </div>
+        </a>
+        {% endif %}
+
+        {% if recent_yield %}
+        <a href="{{ url_for('main.history') }}" class="text-decoration-none">
+            <div class="activity-chip activity-chip--warning">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span class="fw-semibold">{{ recent_yield.total_yield }}t</span>
+                <span class="text-muted">{{ recent_yield.crop_info.name if recent_yield.crop_info else '—' }}</span>
+            </div>
+        </a>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

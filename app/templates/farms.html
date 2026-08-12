@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-3 pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">My Farms</h4>
+        <button class="btn btn-sm btn-success rounded-pill px-3 shadow-sm" data-bs-toggle="modal"
+            data-bs-target="#addFarmModal">
+            <i class="bi bi-plus-lg me-1"></i> Farms जोड़ें
+        </button>
+    </div>
+
+    {% if farms %}
+    <div class="row g-3">
+        {% for farm in farms %}
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="fw-bold text-success mb-0">{{ farm.name }}</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark">{{ farm.area }} acres</span>
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle p-1 edit-farm-btn"
+                                style="width:30px;height:30px;line-height:1;"
+                                data-id="{{ farm.id }}"
+                                data-name="{{ farm.name }}"
+                                data-location="{{ farm.location or '' }}"
+                                data-area="{{ farm.area or '' }}"
+                                data-nitrogen="{{ farm.nitrogen if farm.nitrogen is not none else '' }}"
+                                data-phosphorus="{{ farm.phosphorus if farm.phosphorus is not none else '' }}"
+                                data-potassium="{{ farm.potassium if farm.potassium is not none else '' }}">
+                                <i class="bi bi-pencil" style="font-size:0.75rem;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ farm.location }}</p>
+                    {% if farm.nitrogen is not none or farm.phosphorus is not none or farm.potassium is not none %}
+                    <div class="d-flex gap-2 flex-wrap mt-1">
+                        {% if farm.nitrogen is not none %}
+                        <span class="badge rounded-pill" style="background:#e8f5e9;color:#2e7d32;font-size:0.75rem;"><strong>N</strong> {{ farm.nitrogen }} kg/ha</span>
+                        {% endif %}
+                        {% if farm.phosphorus is not none %}
+                        <span class="badge rounded-pill" style="background:#fff3e0;color:#e65100;font-size:0.75rem;"><strong>P</strong> {{ farm.phosphorus }} kg/ha</span>
+                        {% endif %}
+                        {% if farm.potassium is not none %}
+                        <span class="badge rounded-pill" style="background:#e3f2fd;color:#1565c0;font-size:0.75rem;"><strong>K</strong> {{ farm.potassium }} kg/ha</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-muted mt-5 py-5">
+        <i class="bi bi-map display-1 text-light mb-3"></i>
+        <p>You haven't added any farms yet.</p>
+        <button class="btn btn-outline-success rounded-pill px-4 mt-2" data-bs-toggle="modal"
+            data-bs-target="#addFarmModal">Add your first farm</button>
+    </div>
+    {% endif %}
+
+    <!-- Farms जोड़ें Modal -->
+    <div class="modal fade" id="addFarmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">नया Farms जोड़ें</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addFarmForm">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Farms का नाम</label>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g. North Field">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Location</label>
+                            <input type="text" class="form-control" name="location" placeholder="e.g. District, State">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Area (Acres)</label>
+                            <input type="number" step="0.1" class="form-control" name="area" placeholder="e.g. 5.5">
+                        </div>
+                        <!-- NPK fields -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold text-muted">मिट्टी NPK (kg/ha) — वैकल्पिक</label>
+                        </div>
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#e8f5e9;color:#2e7d32;border:none;">N</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" name="nitrogen" placeholder="kg/ha">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#fff3e0;color:#e65100;border:none;">P</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" name="phosphorus" placeholder="kg/ha">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#e3f2fd;color:#1565c0;border:none;">K</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" name="potassium" placeholder="kg/ha">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill btn-lg">Farms सहेजें</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Farm Modal -->
+    <div class="modal fade" id="editFarmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Farm संपादित करें</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editFarmForm">
+                        <input type="hidden" id="editFarmId">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Farms का नाम</label>
+                            <input type="text" class="form-control" id="editName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Location</label>
+                            <input type="text" class="form-control" id="editLocation" name="location">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Area (Acres)</label>
+                            <input type="number" step="0.1" class="form-control" id="editArea" name="area">
+                        </div>
+                        <!-- NPK fields -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold text-muted">मिट्टी NPK (kg/ha) — वैकल्पिक</label>
+                        </div>
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#e8f5e9;color:#2e7d32;border:none;">N</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" id="editNitrogen" name="nitrogen" placeholder="kg/ha">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#fff3e0;color:#e65100;border:none;">P</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" id="editPhosphorus" name="phosphorus" placeholder="kg/ha">
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold" style="background:#e3f2fd;color:#1565c0;border:none;">K</span>
+                                    <input type="number" step="0.1" min="0" class="form-control" id="editPotassium" name="potassium" placeholder="kg/ha">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill btn-lg">बदलाव सहेजें</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ── Add Farm ──────────────────────────────────────────────────────────────
+    document.getElementById('addFarmForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('{{ url_for("api.handle_farms") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) window.location.reload();
+            else alert('Error adding farm');
+        });
+    });
+
+    // ── Edit Farm — open modal & pre-fill ─────────────────────────────────────
+    document.querySelectorAll('.edit-farm-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('editFarmId').value       = this.dataset.id;
+            document.getElementById('editName').value         = this.dataset.name;
+            document.getElementById('editLocation').value     = this.dataset.location;
+            document.getElementById('editArea').value         = this.dataset.area;
+            document.getElementById('editNitrogen').value     = this.dataset.nitrogen;
+            document.getElementById('editPhosphorus').value   = this.dataset.phosphorus;
+            document.getElementById('editPotassium').value    = this.dataset.potassium;
+            new bootstrap.Modal(document.getElementById('editFarmModal')).show();
+        });
+    });
+
+    // ── Edit Farm — submit ────────────────────────────────────────────────────
+    document.getElementById('editFarmForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const id = document.getElementById('editFarmId').value;
+        const formData = new FormData(this);
+        fetch(`/api/farms/${id}`, {
+            method: 'PUT',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) window.location.reload();
+            else alert('Error updating farm');
+        });
+    });
+</script>
+{% endblock %}
