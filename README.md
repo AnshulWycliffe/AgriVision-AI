@@ -139,7 +139,7 @@ sequenceDiagram
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/AnshulWycliffe/AgriVision-AI
    cd "AgriVision AI"
    ```
 
@@ -160,9 +160,21 @@ sequenceDiagram
 4. **Environment Variables**:
    Create a `.env` file in the root directory of the project and add the necessary environment variables. Example:
    ```env
-   SECRET_KEY=your_secret_key_here
-   GEMINI_API_KEY=your_gemini_api_key_here
-   # Add other required API keys (e.g., Weather API)
+   FLASK_APP=run.py
+   FLASK_ENV=development
+   FLASK_DEBUG=1
+   FLASK_SECRET_KEY=your_super_secret_key_here
+   DATABASE_URL=sqlite:///agrivision.db
+
+   GEMINI_API_KEY=<your_gemini_api_key>
+   GEMINI_MODEL=gemini-3.6-flash
+
+   WEATHER_API_KEY=<your_weather_api_key>
+
+   DISEASE_MODEL_PATH=models/disease_model.keras
+   YIELD_MODEL_PATH=models/yield_model.pkl
+
+   DEMO_MODE=false
    ```
 
 5. **Run the Application**:
