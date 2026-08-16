@@ -108,6 +108,7 @@ class _DiseaseModel:
             return
         try:
             import tensorflow as tf  # lazy import — only needed in REAL mode
+            tf.config.optimizer.set_jit(True)
             import numpy as np
             self._tf = tf
             self._np = np
