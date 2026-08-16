@@ -22,4 +22,4 @@ ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=5000
 
 # Use gunicorn for production (optional) – fallback to python if gunicorn not installed
-CMD ["gunicorn", "run:app", "--bind", "0.0.0.0:5000", "--workers", "4","--threads","2"]
+CMD ["gunicorn", "run:app", "--bind", "0.0.0.0:5000", "--workers", "1","--threads","4"]
