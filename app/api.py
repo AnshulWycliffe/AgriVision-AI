@@ -105,6 +105,7 @@ def analyze_disease():
     farmer_observation = request.form.get('farmer_observation', '')
 
     result = DiseaseService.predict(image_file, farmer_observation)
+    print('HELLO')
 
     if not result.get("success"):
         return jsonify(result)
