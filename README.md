@@ -16,6 +16,8 @@
 
 AgriVision AI is a comprehensive web-based platform built with Flask, designed to empower farmers with advanced AI and Machine Learning technologies. It assists in managing farms, monitoring crop health, predicting yields, and obtaining real-time insights through an integrated AI assistant.
 
+> <img src="placeholder.png" style="vertical-align: middle;">
+
 ## Features
 
 - **Farm & Crop Management**: Register and manage multiple farms, including soil nutrients (Nitrogen, Phosphorus, Potassium), and track crops grown on each farm.
