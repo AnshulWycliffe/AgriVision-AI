@@ -12,9 +12,11 @@ AgriVision AI is a comprehensive web-based platform built with Flask, designed t
 ## Features
 
 - **Farm & Crop Management**: Register and manage multiple farms, including soil nutrients (Nitrogen, Phosphorus, Potassium), and track crops grown on each farm.
-- **Disease Analysis**: Upload images of crops for automated disease detection powered by a custom TensorFlow/Keras model (`disease_model.keras`). Features AI-powered (Gemini) detailed analysis, symptoms, and prevention recommendations provided natively in Hindi for better accessibility.
+- **Disease Analysis (CNN & PlantVillage)**: Automated disease detection powered by an **EfficientNet-B0** TensorFlow model. Trained on the **PlantVillage dataset**, it supports **3 crops** (Tomato, Potato, Bell Pepper) and **15 classes** (12 diseases + healthy states).
 - **Yield Prediction**: Predict crop yields per acre based on farm area, crop type, and disease severity using scikit-learn machine learning models.
-- **AI Assistant Chat**: A conversational AI assistant that helps farmers with queries related to agriculture, powered by the Google Gemini API.
+- **Generative AI (Google Gemini)**: Gemini serves a dual purpose:
+  1. **Disease Enrichment**: Translates CNN predictions into structured, localized (Hindi) JSON containing symptoms, chemical/organic recommendations, and prevention strategies.
+  2. **Interactive Assistant Chat**: A conversational AI assistant that helps farmers with follow-up queries related to agriculture, maintaining conversation history.
 - **Real-Time Weather Integration**: Get localized weather updates for your registered farm locations.
 - **Agriculture News**: Stay updated with the latest agricultural news in India.
 
@@ -65,6 +67,38 @@ AgriVision AI/
 ├── run.py                    # Entry point
 └── .env                      # Environment variables (API keys)
 ```
+
+## Machine Learning & Disease Detection
+
+AgriVision AI uses a deep learning computer vision model to detect crop diseases from leaf images.
+
+### Supported Crops and Diseases (15 Classes)
+The model is trained on the **PlantVillage dataset** and can classify images into the following categories:
+- **Pepper (Bell)**: Bacterial spot, Healthy
+- **Potato**: Early blight, Late blight, Healthy
+- **Tomato**: Bacterial spot, Early blight, Late blight, Leaf Mold, Septoria leaf spot, Spider mites (Two-spotted spider mite), Target Spot, Tomato Yellow Leaf Curl Virus, Tomato mosaic virus, Healthy
+
+### CNN Architecture (EfficientNet-B0)
+We utilize **EfficientNet-B0** as the backbone for image classification.
+- **Why EfficientNet?** It uses compound scaling to balance network depth, width, and resolution, providing high accuracy with a very small memory footprint (~20-30MB). This makes it ideal for CPU-bound production environments.
+
+```mermaid
+graph TD
+    A[Input Image: 224x224x3] --> B[EfficientNet-B0 Backbone]
+    B --> C[Global Average Pooling]
+    C --> D[Dropout Layer for Regularization]
+    D --> E[Dense Output Layer: 15 Classes]
+    E --> F[Softmax Activation]
+    F --> G[Prediction & Confidence Score]
+```
+
+### Model Training Workflow
+- **Data Augmentation**: Techniques like random rotation, flipping, and zoom improve model generalization.
+- **Transfer Learning**: The EfficientNet-B0 base model is loaded with ImageNet weights. The top layer is removed and replaced with a custom 15-unit Dense layer with softmax activation.
+- **Fine-tuning**:
+  1. Train only the top layers with a higher learning rate.
+  2. Unfreeze top blocks of EfficientNet-B0 and fine-tune with a very low learning rate to adapt features specifically to crop leaves.
+- **Preprocessing**: Images are preprocessed to 224x224 pixels and class weights are applied to handle dataset imbalances.
 
 ## System Architecture & Data Flow
 
